@@ -5,7 +5,7 @@ from pydantic import Field
 
 import tools
 
-mcp = FastMCP("Demo")
+mcp = FastMCP("manual-automator")
 
 
 @mcp.tool(
@@ -296,4 +296,4 @@ def swipe(
     return tools.swipe(fx, fy, tx, ty, duration, steps)
 
 if __name__ == "__main__":
-    mcp.run()
+    mcp.run(transport="stdio")
