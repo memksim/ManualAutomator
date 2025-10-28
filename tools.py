@@ -1,8 +1,12 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Union, Optional
 import uiautomator2 as u2
 from device import set_device, get_device
 
+@dataclass(frozen=True)
+class BaseActionResponse:
+    status: bool
+    error: str
 
 @dataclass(frozen=True)
 class ToolResponse:
@@ -94,22 +98,42 @@ def appList(apps_filter: str) -> GetAppListResponse:
             apps=[],
         )
 
-
-@dataclass(frozen=True)
-class LaunchAppResponse:
-    status: bool
-    error: str
-
-
-def launchApp(pkg: str) -> LaunchAppResponse:
+def launchApp(pkg: str) -> BaseActionResponse:
     try:
         get_device().app_start(package_name=pkg)
-        return LaunchAppResponse(
+        return BaseActionResponse(
             status=True,
             error="",
         )
     except Exception as e:
-        return LaunchAppResponse(
+        return BaseActionResponse(
+            status=False,
+            error=str(e),
+        )
+
+
+def click(x: Union[float, int], y: Union[float, int]) -> BaseActionResponse:
+    try:
+        get_device().click(x, y)
+        return BaseActionResponse(
+            status=True,
+            error="",
+        )
+    except Exception as e:
+        return BaseActionResponse(
+            status=False,
+            error=str(e),
+        )
+
+def swipe(fx, fy, tx, ty, duration: Optional[float] = None, steps: Optional[int] = None) -> BaseActionResponse:
+    try:
+        get_device().swipe(fx, fy, tx, ty, duration, steps)
+        return BaseActionResponse(
+            status=True,
+            error=""
+        )
+    except Exception as e:
+        return BaseActionResponse(
             status=False,
             error=str(e),
         )

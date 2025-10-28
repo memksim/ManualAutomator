@@ -1,3 +1,5 @@
+from typing import Union, Optional
+
 from mcp.server.fastmcp import FastMCP
 
 import tools
@@ -26,8 +28,16 @@ def getAppList(apps_filter: str) -> tools.GetAppListResponse:
     return tools.appList(apps_filter)
 
 @mcp.tool()
-def launchApp(package_name: str) -> tools.LaunchAppResponse:
+def launchApp(package_name: str) -> tools.BaseActionResponse:
     return tools.launchApp(package_name)
+
+@mcp.tool()
+def click(x: Union[float, int], y: Union[float, int]) -> tools.BaseActionResponse:
+    return tools.click(x, y)
+
+@mcp.tool()
+def swipe(fx, fy, tx, ty, duration: Optional[float] = None, steps: Optional[int] = None) -> tools.BaseActionResponse:
+    return tools.swipe(fx, fy, tx, ty, duration, steps)
 
 if __name__ == "__main__":
     mcp.run()
