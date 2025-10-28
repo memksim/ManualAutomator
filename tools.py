@@ -56,9 +56,9 @@ class GetDumpResponse:
     hierarchy: str
 
 
-def getDump() -> GetDumpResponse:
+def getDump(compressed: bool) -> GetDumpResponse:
     try:
-        xml = get_device().dump_hierarchy()
+        xml = get_device().dump_hierarchy(compressed=compressed)
         return GetDumpResponse(
             status=True,
             error="",
@@ -69,4 +69,47 @@ def getDump() -> GetDumpResponse:
             status=False,
             error=str(e),
             hierarchy="",
+        )
+
+
+@dataclass(frozen=True)
+class GetAppListResponse:
+    status: bool
+    error: str
+    apps: list[str]
+
+
+def appList(apps_filter: str) -> GetAppListResponse:
+    try:
+        apps = get_device().app_list(apps_filter)
+        return GetAppListResponse(
+            status=True,
+            error="",
+            apps=apps,
+        )
+    except Exception as e:
+        return GetAppListResponse(
+            status=False,
+            error=str(e),
+            apps=[],
+        )
+
+
+@dataclass(frozen=True)
+class LaunchAppResponse:
+    status: bool
+    error: str
+
+
+def launchApp(pkg: str) -> LaunchAppResponse:
+    try:
+        get_device().app_start(package_name=pkg)
+        return LaunchAppResponse(
+            status=True,
+            error="",
+        )
+    except Exception as e:
+        return LaunchAppResponse(
+            status=False,
+            error=str(e),
         )
