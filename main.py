@@ -14,6 +14,7 @@ mcp = FastMCP("manual-automator")
             "Connect to an Android device via uiautomator2 using an optional ADB serial. "
             "Returns device info on success. Safe to call multiple times."
     ),
+    structured_output=True
 )
 def connectDevice(serial: Annotated[
     str,
@@ -44,6 +45,7 @@ def connectDevice(serial: Annotated[
             "Equivalent to swiping down from the status bar. "
             "Use this to verify notifications or trigger quick actions."
     ),
+    structured_output=True
 )
 def openNotifications() -> tools.BaseActionResponse:
     """Open the notification panel on the connected Android device.
@@ -60,6 +62,7 @@ def openNotifications() -> tools.BaseActionResponse:
             "Open the Android quick settings panel (Wi-Fi, Bluetooth, etc.) "
             "via uiautomator2. Useful for toggling or validating system state."
     ),
+    structured_output=True
 )
 def openQuickSettings() -> tools.BaseActionResponse:
     """Open the quick settings panel on the connected Android device.
@@ -73,64 +76,79 @@ def openQuickSettings() -> tools.BaseActionResponse:
 @mcp.tool(
     name="get_ui_dump",
     description=(
-        "Dump the current Android view hierarchy via uiautomator2. "
-        "Returns an XML structure of all visible nodes on screen. "
-        "When 'compressed' is true, system UI nodes (status bar, nav bar) are excluded."
-    )
+            "Retrieve the current Android UI hierarchy via uiautomator2. "
+            "Returns a structured list of nodes (views) with detailed attributes. "
+            "Optional filters can be applied to narrow down nodes by class, text, or resource ID."
+            "As possible, always use filter, they substantially reduce tokens size."
+            "Highly recommended to use view_class_name filter; Often, other secondary filters may lead to filtering errors"
+    ),
+    structured_output=True
 )
 def getDump(
-    compressed: Annotated[
-        bool,
-        Field(
-            description=(
-                "If true, returns a simplified (compressed) hierarchy excluding "
-                "system-level nodes like status bar and navigation bar. "
-                "If false, includes all nodes."
+        request: Annotated[
+            tools.GetDumpRequest,
+            Field(
+                description="Request object defining dump mode and optional node filters.",
+                examples=[
+                    {"filter": {"view_class_name": "android.widget.Button"}},
+                    {"filter": {"view_class_name": "Text"}},
+                    {"filter": {"package_name": "com.google.android.apps.youtube.music", "content_description": "Play"}},
+                    {"filter": {"view_class_name": "Button", "resource_id": "com.example:id/login_button"}},
+                    {"filter": {"view_class_name": "android.widget.TextView", "content_description": "Notifications"}},
+                    {"filter": {"content_description": "Settings", "view_class_name": "TextView"}},
+                    {"filter": {"text": "5", "view_class_name": "TextView"}},
+                    {"filter": {"text": "Вход", "resource_id": "com.example:id/login_button"}},
+                    {"filter": {"text": "Search", "resource_id": "com.example:id/search", "view_class_name": "ImageView"}},
+                ],
             ),
-            examples=[True, False],
-        ),
-    ],
+        ],
 ) -> tools.GetDumpResponse:
-    """Return an XML dump of the current UI hierarchy on the connected Android device.
+    """
+    Return a structured hierarchy dump of the current UI on the connected Android device.
 
     Behavior:
-    - Uses `device.dump_hierarchy(compressed=...)` under the hood.
-    - When `compressed=True`, omits system UI nodes.
-    - When `compressed=False`, returns the full raw hierarchy.
+    - Uses `device.dump_hierarchy()` via uiautomator2.
+    - When filters are provided, applies substring matching for text/content and
+      exact/partial matching for resource IDs, classes, and packages.
 
-    Use this tool for visual tree inspection, automated QA, or locating view elements.
+    Typical uses:
+    - Visual UI inspection
+    - Automated QA and regression testing
+    - Element discovery for interaction scripts
     """
-    return tools.getDump(compressed)
+    return tools.getDump(request)
+
 
 @mcp.tool(
     name="get_app_list",
     description=(
-        "Retrieve a list of installed applications on the connected Android device "
-        "via uiautomator2 or ADB. Accepts optional filters controlling which apps are included. "
-        "If no filter is provided, returns all installed apps."
-    )
+            "Retrieve a list of installed applications on the connected Android device "
+            "via uiautomator2 or ADB. Accepts optional filters controlling which apps are included. "
+            "If no filter is provided, returns all installed apps."
+    ),
+    structured_output=True
 )
 def getAppList(
-    apps_filter: Annotated[
-        str,
-        Field(
-            description=(
-                "Filter string controlling which apps to include in the list. "
-                "May be empty to include all apps. "
-                "Supports the same syntax as `adb shell pm list packages`, e.g.: \n"
-                "- `-f` — show associated APK file path\n"
-                "- `-d` — filter to disabled apps\n"
-                "- `-e` — filter to enabled apps\n"
-                "- `-s` — filter to system apps\n"
-                "- `-3` — filter to third-party(user) apps\n"
-                "- `-i` — show installer package name\n"
-                "- `-u` — include uninstalled packages\n"
-                "- `--user USER_ID` — query for a specific user\n"
-                "- `FILTER` — partial string match (e.g. 'com.google.')"
+        apps_filter: Annotated[
+            str,
+            Field(
+                description=(
+                        "Filter string controlling which apps to include in the list. "
+                        "May be empty to include all apps. "
+                        "Supports the same syntax as `adb shell pm list packages`, e.g.: \n"
+                        "- `-f` — show associated APK file path\n"
+                        "- `-d` — filter to disabled apps\n"
+                        "- `-e` — filter to enabled apps\n"
+                        "- `-s` — filter to system apps\n"
+                        "- `-3` — filter to third-party(user) apps\n"
+                        "- `-i` — show installer package name\n"
+                        "- `-u` — include uninstalled packages\n"
+                        "- `--user USER_ID` — query for a specific user\n"
+                        "- `FILTER` — partial string match (e.g. 'com.google.')"
+                ),
+                examples=["-3", "--user 0 com.google.", ""],
             ),
-            examples=["-3", "--user 0 com.google.", ""],
-        ),
-    ] = "",
+        ] = "",
 ) -> tools.GetAppListResponse:
     """Retrieve a list of installed apps on the connected Android device.
 
@@ -147,26 +165,27 @@ def getAppList(
 @mcp.tool(
     name="launch_app",
     description=(
-        "Launch an installed Android application by its package name "
-        "using uiautomator2. Fails if the package is not found or cannot be started."
+            "Launch an installed Android application by its package name "
+            "using uiautomator2. Fails if the package is not found or cannot be started."
     ),
+    structured_output=True
 )
 def launchApp(
-    package_name: Annotated[
-        str,
-        Field(
-            description=(
-                "Full package name of the Android app to launch. "
-                "Must not be empty. Example: 'com.google.android.apps.youtube.music'."
+        package_name: Annotated[
+            str,
+            Field(
+                description=(
+                        "Full package name of the Android app to launch. "
+                        "Must not be empty. Example: 'com.google.android.apps.youtube.music'."
+                ),
+                min_length=1,
+                examples=[
+                    "com.google.android.apps.youtube.music",
+                    "com.vk.android",
+                    "com.android.settings",
+                ],
             ),
-            min_length=1,
-            examples=[
-                "com.google.android.apps.youtube.music",
-                "com.vk.android",
-                "com.android.settings",
-            ],
-        ),
-    ],
+        ],
 ) -> tools.BaseActionResponse:
     """Launch an application on the connected Android device.
 
@@ -185,25 +204,26 @@ def launchApp(
 @mcp.tool(
     name="click",
     description=(
-        "Perform a tap gesture at the specified screen coordinates using uiautomator2. "
-        "Useful for precise element interaction when accessibility selectors are unavailable."
+            "Perform a tap gesture at the specified screen coordinates using uiautomator2. "
+            "Useful for precise element interaction when accessibility selectors are unavailable."
     ),
+    structured_output=True
 )
 def click(
-    x: Annotated[
-        Union[float, int],
-        Field(
-            description="X coordinate of the tap on screen in pixels.",
-            examples=[120, 640.5],
-        ),
-    ],
-    y: Annotated[
-        Union[float, int],
-        Field(
-            description="Y coordinate of the tap on screen in pixels.",
-            examples=[480, 1280.2],
-        ),
-    ],
+        x: Annotated[
+            Union[float, int],
+            Field(
+                description="X coordinate of the tap on screen in pixels.",
+                examples=[120, 640.5],
+            ),
+        ],
+        y: Annotated[
+            Union[float, int],
+            Field(
+                description="Y coordinate of the tap on screen in pixels.",
+                examples=[480, 1280.2],
+            ),
+        ],
 ) -> tools.BaseActionResponse:
     """Simulate a single tap gesture at the specified screen coordinates.
 
@@ -220,66 +240,67 @@ def click(
 @mcp.tool(
     name="swipe",
     description=(
-        "Perform a swipe gesture on the connected Android device "
-        "from one coordinate to another using uiautomator2. "
-        "Either 'duration' or 'steps' can control swipe speed, but not both."
-    )
+            "Perform a swipe gesture on the connected Android device "
+            "from one coordinate to another using uiautomator2. "
+            "Either 'duration' or 'steps' can control swipe speed, but not both."
+    ),
+    structured_output=True
 )
 def swipe(
-    fx: Annotated[
-        int,
-        Field(
-            description="Start X coordinate (in screen pixels).",
-            examples=[100, 640.5],
-        ),
-    ],
-    fy: Annotated[
-        int,
-        Field(
-            description="Start Y coordinate (in screen pixels).",
-            examples=[800, 550.1],
-        ),
-    ],
-    tx: Annotated[
-        int,
-        Field(
-            description="End X coordinate (in screen pixels).",
-            examples=[100, 99.7],
-        ),
-    ],
-    ty: Annotated[
-        int,
-        Field(
-            description="End Y coordinate (in screen pixels).",
-            examples=[200, 100.8],
-        ),
-    ],
-    duration: Annotated[
-        Optional[float],
-        Field(
-            default=None,
-            description=(
-                "Swipe duration in seconds. "
-                "Defines total gesture time. "
-                "Cannot be used together with 'steps'. "
-                "If both are provided, 'duration' will be ignored and a warning issued."
+        fx: Annotated[
+            int,
+            Field(
+                description="Start X coordinate (in screen pixels).",
+                examples=[100, 640.5],
             ),
-            examples=[0.3, None],
-        ),
-    ] = None,
-    steps: Annotated[
-        Optional[int],
-        Field(
-            default=None,
-            description=(
-                "Number of move steps sent to the system. "
-                "Use this to control swipe speed instead of 'duration'. "
-                "Cannot be set together with 'duration'. "
-                "Recommended when you need deterministic behavior."
+        ],
+        fy: Annotated[
+            int,
+            Field(
+                description="Start Y coordinate (in screen pixels).",
+                examples=[800, 550.1],
             ),
-            examples=[10, 20, None],
-        ),
-    ] = None,
+        ],
+        tx: Annotated[
+            int,
+            Field(
+                description="End X coordinate (in screen pixels).",
+                examples=[100, 99.7],
+            ),
+        ],
+        ty: Annotated[
+            int,
+            Field(
+                description="End Y coordinate (in screen pixels).",
+                examples=[200, 100.8],
+            ),
+        ],
+        duration: Annotated[
+            Optional[float],
+            Field(
+                default=None,
+                description=(
+                        "Swipe duration in seconds. "
+                        "Defines total gesture time. "
+                        "Cannot be used together with 'steps'. "
+                        "If both are provided, 'duration' will be ignored and a warning issued."
+                ),
+                examples=[0.3, None],
+            ),
+        ] = None,
+        steps: Annotated[
+            Optional[int],
+            Field(
+                default=None,
+                description=(
+                        "Number of move steps sent to the system. "
+                        "Use this to control swipe speed instead of 'duration'. "
+                        "Cannot be set together with 'duration'. "
+                        "Recommended when you need deterministic behavior."
+                ),
+                examples=[10, 20, None],
+            ),
+        ] = None,
 ) -> tools.BaseActionResponse:
     """Swipe gesture from (fx, fy) to (tx, ty) on the connected Android device.
 
@@ -294,6 +315,7 @@ def swipe(
     - Simulating drag gestures
     """
     return tools.swipe(fx, fy, tx, ty, duration, steps)
+
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")

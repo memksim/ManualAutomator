@@ -1,12 +1,11 @@
-from dataclasses import dataclass
-from pydantic import Field
+from pydantic import Field, BaseModel
 from typing import Any, Union, Optional
 import uiautomator2 as u2
 from device import set_device, get_device
+from node import parse_nodes_from_string, filter_nodes, Node, NodesFilter
 
 
-@dataclass(frozen=True)
-class BaseActionResponse:
+class BaseActionResponse(BaseModel):
     """Response containing info about action performed """
     status: bool = Field(
         description="True if action performed successfully.",
@@ -21,8 +20,7 @@ class BaseActionResponse:
     )
 
 
-@dataclass(frozen=True)
-class ConnectDeviceResponse:
+class ConnectDeviceResponse(BaseModel):
     """Response containing info about connecting device"""
     status: bool = Field(
         description="True if connection to the Android device succeeded.",
@@ -88,9 +86,11 @@ def openQuickSettings() -> BaseActionResponse:
         )
 
 
-@dataclass(frozen=True)
-class GetDumpResponse:
-    """Response containing the UI hierarchy dump."""
+class GetDumpResponse(BaseModel):
+    """
+    Response containing the UI hierarchy dump after applying optional filters.
+    """
+
     status: bool = Field(
         description="True if hierarchy dump was retrieved successfully.",
         examples=[True, False],
@@ -100,37 +100,87 @@ class GetDumpResponse:
         description="Error message if dump failed; empty string when successful.",
         examples=["device not connected", ""],
     )
-    hierarchy: str = Field(
+    hierarchy: list[Node] = Field(
         description=(
-            "Serialized XML string representing the current view hierarchy "
-            "as returned by uiautomator2. "
-            "Empty if dump failed."
+            "List of UI nodes currently visible on the device screen, "
+            "each represented as a `Node` object. "
+            "If filters are provided, only matching nodes are included."
         ),
         examples=[
-            "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?><hierarchy rotation=\"0\"><node index=\"0\" ... /></hierarchy>",
-            "",
+            [
+                {
+                    "index": 0,
+                    "text": "OK",
+                    "resource_id": "com.example:id/ok_button",
+                    "class_name": "android.widget.Button",
+                    "package": "com.example",
+                    "clickable": True,
+                    "enabled": True,
+                    "visible_to_user": True,
+                    "bounds": [[100, 200], [300, 260]],
+                },
+                {}
+            ]
         ],
     )
 
 
-def getDump(compressed: bool) -> GetDumpResponse:
+class GetDumpRequest(BaseModel):
+    """
+    Request for retrieving the current Android UI hierarchy dump.
+    """
+    filter: Optional[NodesFilter] = Field(
+        default=None,
+        description="Optional filters for selecting nodes from the dump result.",
+        examples=[
+            {"class_name": "Button"},
+            {"text": "OK"},
+            {"packageName": "com.vk.android", "contentDescription": "Search"},
+        ],
+    )
+
+
+def getDump(request: GetDumpRequest) -> GetDumpResponse:
     try:
-        xml = get_device().dump_hierarchy(compressed=compressed)
-        return GetDumpResponse(
-            status=True,
-            error="",
-            hierarchy=xml,
-        )
+        xml = get_device().dump_hierarchy(compressed=False)
+        nodes = parse_nodes_from_string(xml)
+
+        if request.filter is None:
+            return GetDumpResponse(
+                status=True,
+                error="",
+                hierarchy=nodes
+            )
+
+        filtered = filter_nodes(nodes, request.filter)
+
+        #If filtering returns empty, considering filtering only by view_class_name.
+        if len(filtered) == 0 and request.filter.view_class_name is not None:
+            filtered = filter_nodes(nodes, NodesFilter(
+                view_class_name=request.filter.view_class_name,
+            ))
+
+        if len(filtered) == 0:
+            return GetDumpResponse(
+                status=True,
+                error="",
+                hierarchy=nodes
+            )
+        else:
+            return GetDumpResponse(
+                status=True,
+                error="",
+                hierarchy=filtered,
+            )
     except Exception as e:
         return GetDumpResponse(
             status=False,
             error=str(e),
-            hierarchy="",
+            hierarchy=list(),
         )
 
 
-@dataclass(frozen=True)
-class GetAppListResponse:
+class GetAppListResponse(BaseModel):
     """Response containing the list of installed Android apps."""
     status: bool = Field(
         description="True if app list was retrieved successfully.",
