@@ -7,11 +7,12 @@ import tools
 
 mcp = FastMCP("manual-automator")
 
+
 @mcp.tool(
     name="get_devices_list",
     description=(
-        "Retrieve the list of connected Android devices or emulators using ADB. "
-        "Each device is represented by its serial number as reported by `adb devices`."
+            "Retrieve the list of connected Android devices or emulators using ADB. "
+            "Each device is represented by its serial number as reported by `adb devices`."
     ),
 )
 def devicesList() -> tools.DevicesListResponse:
@@ -26,6 +27,7 @@ def devicesList() -> tools.DevicesListResponse:
     Use this tool to detect available devices before performing UI actions.
     """
     return tools.getDevices()
+
 
 @mcp.tool(
     name="connect_device",
@@ -111,13 +113,15 @@ def getDump(
                 examples=[
                     {"filter": {"view_class_name": "android.widget.Button"}},
                     {"filter": {"view_class_name": "Text"}},
-                    {"filter": {"package_name": "com.google.android.apps.youtube.music", "content_description": "Play"}},
+                    {"filter": {"package_name": "com.google.android.apps.youtube.music",
+                                "content_description": "Play"}},
                     {"filter": {"view_class_name": "Button", "resource_id": "com.example:id/login_button"}},
                     {"filter": {"view_class_name": "android.widget.TextView", "content_description": "Notifications"}},
                     {"filter": {"content_description": "Settings", "view_class_name": "TextView"}},
                     {"filter": {"text": "5", "view_class_name": "TextView"}},
                     {"filter": {"text": "Вход", "resource_id": "com.example:id/login_button"}},
-                    {"filter": {"text": "Search", "resource_id": "com.example:id/search", "view_class_name": "ImageView"}},
+                    {"filter": {"text": "Search", "resource_id": "com.example:id/search",
+                                "view_class_name": "ImageView"}},
                 ],
             ),
         ],
@@ -334,6 +338,100 @@ def swipe(
     - Simulating drag gestures
     """
     return tools.swipe(fx, fy, tx, ty, duration, steps)
+
+
+@mcp.tool(
+    name="press_key",
+    description=(
+            "Simulate a hardware key press on the connected Android device using uiautomator2. "
+            "The key can be specified by name (e.g., 'home', 'back') or numeric key code. "
+            "Useful for navigating the system or testing key events."
+    ),
+)
+def pressKey(
+        key: Annotated[
+            str,
+            Field(
+                description=(
+                        "Name or key code of the Android hardware button to press. "
+                        "Supported key names include:\n"
+                        "- `home`\n"
+                        "- `back`\n"
+                        "- `left`\n"
+                        "- `right`\n"
+                        "- `up`\n"
+                        "- `down`\n"
+                        "- `center`\n"
+                        "- `menu`\n"
+                        "- `search`\n"
+                        "- `enter`\n"
+                        "- `delete` (or `del`)\n"
+                        "- `recent` (recent apps)\n"
+                        "- `volume_up`\n"
+                        "- `volume_down`\n"
+                        "- `volume_mute`\n"
+                        "- `camera`\n"
+                        "- `power`\n"
+                        "Alternatively, you can pass a numeric key code such as '26' for Power."
+                ),
+                examples=["home", "back", "power", "26"],
+            ),
+        ],
+) -> tools.BaseActionResponse:
+    """Press a hardware key on the connected Android device.
+
+    Behavior:
+    - Calls `device.press(key)` via uiautomator2.
+    - Accepts both string key names and integer key codes.
+    - Returns a success flag and error message if the operation fails.
+
+    Typical use-cases:
+    - Navigating back to the home screen (`home`).
+    - Dismissing dialogs (`back`).
+    - Adjusting volume (`volume_up`, `volume_down`).
+    """
+    return tools.pressKey(key)
+
+
+@mcp.tool(
+    name="stop_app",
+    description=(
+            "Force-stop a running Android application using uiautomator2. "
+            "The app is identified by its package name. "
+            "This tool simulates pressing the Home button first, then stops the app process via ADB."
+    ),
+)
+def stopApp(
+        pkg: Annotated[
+            str,
+            Field(
+                description=(
+                        "Full package name of the Android application to stop. "
+                        "Example: 'com.google.android.youtube' or 'ru.yandex'. "
+                        "Must not be empty; app must be installed and currently running."
+                ),
+                min_length=1,
+                examples=[
+                    "com.google.android.youtube",
+                    "com.ru.yandex",
+                    "com.duolingo",
+                ],
+            ),
+        ],
+) -> tools.BaseActionResponse:
+    """Force-stop an Android application on the connected device.
+
+    Behavior:
+    - First simulates pressing the 'home' key to minimize the current app.
+    - Then calls `device.app_stop(package_name)` to stop the app process completely.
+    - Returns `status=True` on success, or `status=False` with an error message if stopping fails.
+
+    Typical use-cases:
+    - Closing apps after automation tests.
+    - Resetting app state before the next scenario.
+    - Ensuring a clean environment for UI tests.
+    """
+    return tools.closeApp(pkg)
 
 
 if __name__ == "__main__":

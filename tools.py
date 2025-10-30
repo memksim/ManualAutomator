@@ -62,7 +62,6 @@ class DevicesListResponse(BaseModel):
     )
 
 
-
 def getDevices() -> DevicesListResponse:
     try:
         devices = adbutils.adb.device_list()
@@ -80,7 +79,6 @@ def getDevices() -> DevicesListResponse:
             error=str(e),
             devices_serial_list=[],
         )
-
 
 
 def connect(serial: str) -> ConnectDeviceResponse:
@@ -197,7 +195,7 @@ def getDump(request: GetDumpRequest) -> GetDumpResponse:
 
         filtered = filter_nodes(nodes, request.filter)
 
-        #If filtering returns empty, considering filtering only by view_class_name.
+        # If filtering returns empty, considering filtering only by view_class_name.
         if len(filtered) == 0 and request.filter.view_class_name is not None:
             filtered = filter_nodes(nodes, NodesFilter(
                 view_class_name=request.filter.view_class_name,
@@ -270,6 +268,35 @@ def launchApp(pkg: str) -> BaseActionResponse:
                 error="Cannot launch app '{}'.".format(pkg),
             )
         get_device().app_start(package_name=pkg)
+        return BaseActionResponse(
+            status=True,
+            error="",
+        )
+    except Exception as e:
+        return BaseActionResponse(
+            status=False,
+            error=str(e),
+        )
+
+
+def pressKey(key: str) -> BaseActionResponse:
+    try:
+        get_device().press(key)
+        return BaseActionResponse(
+            status=True,
+            error="",
+        )
+    except Exception as e:
+        return BaseActionResponse(
+            status=False,
+            error=str(e),
+        )
+
+
+def closeApp(pkg: str) -> BaseActionResponse:
+    try:
+        get_device().press("home")
+        get_device().app_stop(pkg)
         return BaseActionResponse(
             status=True,
             error="",
