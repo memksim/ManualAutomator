@@ -1,3 +1,4 @@
+import adbutils
 from pydantic import Field, BaseModel
 from typing import Any, Union, Optional
 import uiautomator2 as u2
@@ -38,6 +39,48 @@ class ConnectDeviceResponse(BaseModel):
             "Leaving empty string on success."),
         examples=["Can't find any android device/emulator", ""],
     )
+
+
+class DevicesListResponse(BaseModel):
+    """Response containing the list of connected Android devices."""
+
+    status: bool = Field(
+        description="True if device list was retrieved successfully.",
+        examples=[True, False],
+    )
+    error: str = Field(
+        default="",
+        description="Error message if listing failed; empty string when successful.",
+        examples=["ADB not found", ""],
+    )
+    devices_serial_list: list[str] = Field(
+        description="List of ADB serial numbers for all connected Android devices or emulators.",
+        examples=[
+            ["emulator-5554", "R9CT200XYZ"],
+            [],
+        ],
+    )
+
+
+
+def getDevices() -> DevicesListResponse:
+    try:
+        devices = adbutils.adb.device_list()
+        serials = []
+        for device in devices:
+            serials.append(device.serial)
+        return DevicesListResponse(
+            status=True,
+            error="",
+            devices_serial_list=serials,
+        )
+    except Exception as e:
+        return DevicesListResponse(
+            status=False,
+            error=str(e),
+            devices_serial_list=[],
+        )
+
 
 
 def connect(serial: str) -> ConnectDeviceResponse:

@@ -7,6 +7,25 @@ import tools
 
 mcp = FastMCP("manual-automator")
 
+@mcp.tool(
+    name="get_devices_list",
+    description=(
+        "Retrieve the list of connected Android devices or emulators using ADB. "
+        "Each device is represented by its serial number as reported by `adb devices`."
+    ),
+)
+def devicesList() -> tools.DevicesListResponse:
+    """Return a list of connected Android devices' serial numbers.
+
+    Behavior:
+    - Calls `adbutils.adb.device_list()` under the hood.
+    - Returns a list of ADB serial numbers (e.g., 'emulator-5554', 'R9CT200XYZ').
+    - If no devices are connected, returns an empty list.
+    - If ADB is not accessible, returns an error with `status=False`.
+
+    Use this tool to detect available devices before performing UI actions.
+    """
+    return tools.getDevices()
 
 @mcp.tool(
     name="connect_device",
