@@ -434,5 +434,75 @@ def stopApp(
     return tools.closeApp(pkg)
 
 
+@mcp.tool(
+    name="input_text",
+    description=(
+        "Enter text into a specific input field on the connected Android device "
+        "by locating it through its resource ID (XPath selector). "
+        "Uses uiautomator2's XPath engine to find the element and set its text value."
+    )
+)
+def inputText(
+    res_id: Annotated[
+        str,
+        Field(
+            description=(
+                "XPath or resource ID selector of the target input field. "
+                "Typically in the form `//*[@resource-id='com.example:id/username']` "
+                "or `com.example:id/username`. Must uniquely identify the editable element."
+            ),
+            examples=[
+                "//*[@resource-id='com.example:id/search_bar']",
+                "com.vk.android:id/message_input",
+            ],
+        ),
+    ],
+    text: Annotated[
+        str,
+        Field(
+            description=(
+                "Text string to input into the target field. "
+                "Supports Unicode characters. Existing text will be replaced."
+            ),
+            examples=["Hello world", "test_user123", "Поиск"],
+        ),
+    ],
+) -> tools.BaseActionResponse:
+    """Set text inside an input field on the connected Android device.
+
+    Behavior:
+    - Uses `device.xpath(res_id).set_text(text)` internally.
+    - If multiple elements match the selector, the first one is used.
+    - Replaces existing content in the field.
+    - Returns a success flag and optional error message.
+
+    Typical use-cases:
+    - Filling login forms, search bars, or message inputs.
+    - Automating form entry in test scenarios.
+    """
+    return tools.inputText(res_id, text)
+
+
+@mcp.tool(
+    name="hide_keyboard",
+    description=(
+        "Hide the on-screen (soft) keyboard on the connected Android device. "
+        "Useful after typing text into input fields to restore full screen visibility."
+    )
+)
+def hideKeyboard() -> tools.BaseActionResponse:
+    """Hide the Android on-screen keyboard if it is currently visible.
+
+    Behavior:
+    - Calls `device.hide_keyboard()` internally via uiautomator2.
+    - If the keyboard is already hidden, the operation succeeds silently.
+    - Returns a success flag and an error message if the action fails.
+
+    Typical use-cases:
+    - Restoring screen visibility after text input.
+    - Ensuring UI elements are not covered by the soft keyboard during automation.
+    """
+    return tools.hideKeyboard()
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

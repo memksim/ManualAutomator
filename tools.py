@@ -334,3 +334,31 @@ def swipe(fx, fy, tx, ty, duration: Optional[float] = None, steps: Optional[int]
             status=False,
             error=str(e),
         )
+
+
+def inputText(res_id, text: str) -> BaseActionResponse:
+    try:
+        get_device().xpath(res_id).set_text(text)
+        return BaseActionResponse(
+            status=True,
+            error="",
+        )
+    except Exception as e:
+        return BaseActionResponse(
+            status=False,
+            error=str(e),
+        )
+
+
+def hideKeyboard():
+    try:
+        get_device().hide_keyboard()
+        return BaseActionResponse(
+            status=True,
+            error="",
+        )
+    except Exception as e:
+        return BaseActionResponse(
+            status=False,
+            error=str(e),
+        )
