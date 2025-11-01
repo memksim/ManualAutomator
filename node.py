@@ -180,6 +180,11 @@ class NodesFilter(BaseModel):
         description="Use only if you sure that hierarchy have that text. Always as secondary filter. Filter by substring in the visible text of the element.",
         examples=["Login", "OK", "Search"],
     )
+    hint: Optional[str] = Field(
+        default=None,
+        description="Use only if you sure that hierarchy have that hint. Always as secondary filter. Filter by substring in the hint of the element.",
+        examples=["Search", "Password"],
+    )
 
 
 # ---- Парсинг в список ----
@@ -195,26 +200,6 @@ def parse_nodes_from_file(path: str) -> List[Node]:
     root = tree.getroot()
     return [Node.from_xml(el) for el in root.iter("node")]
 
-
-# ---- Утил-фильтр (по твоим 4 полям) ----
-Predicate = Callable[[Node], bool]
-
-"""
-def filter_nodes(nodes: Iterable[Node], f: NodesFilter) -> List[Node]:
-    any_filter = any([f.view_class_name, f.package_name, f.resource_id, f.content_description, f.text])
-    result = []
-    for n in nodes:
-        match = (
-            (f.view_class_name is not None and f.view_class_name in n.view_class_name) or
-            (f.package_name is not None and f.package_name in n.package) or
-            (f.resource_id is not None and f.resource_id == n.resource_id) or
-            (f.content_description is not None and f.content_description in n.content_desc) or
-            (f.text is not None and f.text in n.text)
-        )
-        if match or not any_filter:
-            result.append(n)
-    return result
-"""
 
 def filter_nodes(nodes: Iterable[Node], f: NodesFilter) -> List[Node]:
     preds = []
@@ -238,6 +223,10 @@ def filter_nodes(nodes: Iterable[Node], f: NodesFilter) -> List[Node]:
     if f.text:
         v = f.text
         preds.append(lambda n, r=v: r in n.text)
+
+    if f.hint:
+        v = f.hint
+        preds.append(lambda n, r=v: r in n.hint)
 
     # 0 фильтров → вернуть всё
     if not preds:
