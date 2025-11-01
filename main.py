@@ -122,6 +122,7 @@ def getDump(
                     {"filter": {"text": "Вход", "resource_id": "com.example:id/login_button"}},
                     {"filter": {"text": "Search", "resource_id": "com.example:id/search",
                                 "view_class_name": "ImageView"}},
+                    {"filter": {"hint": "Login", "view_class_name": "EditText"}},
                 ],
             ),
         ],
